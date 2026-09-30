@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kettenroboter - Konzept V1.0</title>
+<style>
+@page { size: A4; margin: 10mm 11mm 12mm 11mm; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI','Helvetica Neue',Arial,sans-serif; font-size: 10.5pt; color: #1c1c24; line-height: 1.45; max-width: 210mm; margin: 0 auto; padding: 6mm 4mm; background: #f5f6fa; }
+h1 { font-size: 20pt; color: #0b3d63; text-align: center; padding-bottom: 3mm; margin-bottom: 3mm; border-bottom: 3px solid #0b3d63; }
+h2 { font-size: 13.5pt; color: #fff; background: linear-gradient(135deg,#0b3d63,#145a8a); padding: 2mm 4mm; border-radius: 3mm; margin: 7mm 0 3mm 0; page-break-after: avoid; }
+h3 { font-size: 11.5pt; color: #0b3d63; margin: 4mm 0 2mm 0; border-left: 4px solid #2a7cb8; padding-left: 3mm; page-break-after: avoid; }
+p { margin: 1.2mm 0; }
+.subtitle { text-align: center; font-size: 11pt; color: #2a7cb8; margin-bottom: 3mm; font-weight: 600; }
+.meta { text-align: center; font-size: 9pt; color: #666; margin-bottom: 4mm; border-bottom: 1px solid #c6d2dc; padding-bottom: 2mm; }
+table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm 0; font-size: 9.2pt; box-shadow: 0 1px 4px rgba(0,0,0,.08); border-radius: 2mm; overflow: hidden; }
+th { background: linear-gradient(135deg,#dce9f4,#c2d9e8); color: #0b3d63; text-align: left; padding: 1.6mm 2.2mm; border: 1px solid #87a5bd; font-size: 9pt; font-weight: 700; }
+td { padding: 1.4mm 2.2mm; border: 1px solid #b9c9d6; vertical-align: top; }
+tbody tr:nth-child(even) td { background: #f4f8fb; }
+.sum td { font-weight: bold; background: #fceaa0 !important; border-top: 2px solid #d4a017; }
+.good { color: #0c7a2b; font-weight: bold; }
+.warn { color: #b04800; font-weight: bold; }
+.box { border: 1px solid #b8c8d6; border-radius: 3mm; padding: 3mm 4mm; margin: 3mm 0; background: #fbfdfe; }
+.box strong { color: #0b3d63; }
+.callout { background: linear-gradient(135deg,#fff7e0,#fef3c7); border: 1px solid #e0c67a; }
+.small { font-size: 8.5pt; color: #555; }
+.no-print { display: block; background: linear-gradient(135deg,#eef,#e8f0f8); border: 1px solid #99b; border-radius: 2mm; padding: 2mm 3mm; margin-bottom: 4mm; font-size: 9pt; text-align: center; }
+svg.d { background: #fafbfc; border: 1px solid #d0d8e0; border-radius: 3mm; padding: 2mm; margin: 2.5mm 0; display: block; max-width: 100%; }
+a { color: #145a8a; text-decoration: none; border-bottom: 1px dotted #145a8a; }
+a:hover { color: #c2410c; }
+.pill { display: inline-block; padding: 0.3mm 2mm; border-radius: 2mm; font-size: 8pt; font-weight: 600; }
+.p6 { background: #ffe0d0; color: #9a3412; }
+.p5 { background: #dcfce7; color: #166534; }
+.p3 { background: #dbeafe; color: #1e40af; }
+.two { column-count: 2; column-gap: 6mm; font-size: 9.5pt; }
+.two div { break-inside: avoid; }
+@media print {
+  body { padding: 0; background: #fff; font-size: 10pt; }
+  .no-print { display: none; }
+  h2 { break-before: page; margin-top: 0; }
+  h2:first-of-type { break-before: auto; }
+  h2, h3, h4 { break-after: avoid; }
+  table { break-inside: auto; }
+  tr { break-inside: avoid; }
+  svg.d, .box { break-inside: avoid; }
+  li { break-inside: avoid; }
+  p { orphans: 3; widows: 3; }
+  a { color: #145a8a; }
+  .pbreak { break-before: page; margin-top: 0; }
+}
+@media (max-width: 800px) { body { font-size: 9pt; padding: 2mm; } .two { column-count: 1; } }
+</style>
+</head>
+<body>
+
+<div class="no-print"><b>Drucken:</b> Strg+P → A4, Hintergrundgrafiken aktivieren, Browser-Kopf-/Fußzeilen deaktivieren.</div>
+
+<h1>Kettenroboter mit ESP32-WROOM-32E</h1>
+<p class="subtitle">Konzept <b>V1.0</b> - Idee · Aufbau · Teilliste · Datenblatt</p>
+<p class="meta">Stand: 28.09.2026 · Bestellung: Dezember 2026 · 20 Stück · 1S LiPo 3,7V 10.000mAh (Fertig-Pack) · Prototyp V1.0</p>
+
+<!-- ==================== 1. IDEE ==================== -->
+<h2>1. Idee</h2>
+
+<h3>1.1 Was soll der Roboter können?</h3>
+<p>Ein Kettenroboter für den MINT-Unterricht, der selbstständig Hindernisse erkennt, Linien folgt, Strecken misst und über WiFi Daten weitergibt. 20 identische Einheiten sollen gebaut und programmiert werden – jeder Schüler erhält einen Roboter zum Selbstbau.</p>
+
+<div class="box">
+<b>Kernfunktionen:</b>
+<ul style="margin:1mm 0 0 5mm">
+<li><b>Hinderniserkennung vorn:</b> HC-SR04 Ultraschall misst 3-400cm über Trig/Echo-Puls – Schüler lernen Schallgeschwindigkeit und Laufzeitberechnung</li>
+<li><b>Abstand seitlich:</b> 2× VL53L0X ToF (links/rechts) für Wandabstand und Linienführung</li>
+<li><b>Linienverfolgung:</b> TCS34725 Farbsensor erkennt schwarze Linien auf hellem Untergrund</li>
+<li><b>Erweiterung:</b> 4-pol. I²C-Buchse an der Oberfläche (Deckel) führt den Bus nach außen – externe Module (BME280 etc.) einfach einstecken, freier MUX-Kanal K5</li>
+<li><b>Lage/Drift:</b> LSM6DSOX IMU (Beschleunigung + Gyroskop) für Selbstausrichtung</li>
+<li><b>Steuerung:</b> ESP32 (WiFi, Logik, Sensorik) + Arduino Pro Micro (Echtzeit: Motor-PWM, Encoder, Töne)</li>
+<li><b>Feedback:</b> WS2812 LED-Strip (Statuslicht) + OLED-Display (Messwerte) + Piezo (Signaltöne)</li>
+<li><b>Datenaufzeichnung:</b> microSD-Karte speichert Sensor- und Fahrdaten</li>
+</ul>
+</div>
+
+<h3>1.2 Warum diese Architektur?</h3>
+<table>
+<tr><th>Entscheidung</th><th>Begründung</th><th>Lerninhalt</th></tr>
+<tr><td><b>ESP32 + Arduino</b> (zwei CPUs)</td><td>ESP32 für WiFi/Sensorik, Arduino für Echtzeit-Motorsteuerung</td><td>Arbeitsteilung, I²C-Kommunikation, Adressierung</td></tr>
+<tr><td><b>I²C-Bus mit TCA9548A</b></td><td>Alle Sensoren an 2 Pins, trotz gleicher Adressen</td><td>Bussysteme, Multiplexer, Adresskonflikte</td></tr>
+<tr><td><b>Ultraschall (HC-SR04)</b> statt ToF vorn</td><td>Direkte GPIO-Ansteuerung, kein Chip nötig</td><td>Laufzeitmessung, Schallgeschwindigkeit, PWM</td></tr>
+<tr><td><b>1S LiPo 3,7V 10Ah</b> (Fertig-Pack)</td><td>Einzelzelle = kein Zellausgleich, keine Balance-Ladung, einfachste Lithium-Technik – 10Ah trotzdem ~6-7h Laufzeit</td><td>Lithium-Sicherheit, CC/CV-Laden, Kapazität vs. Laufzeit</td></tr>
+<tr><td><b>2× MT3608 Boost</b> (6V + 5V)</td><td>Aus 3,0-4,2V konstant 6V für Motoren und 5V für Logik – unabhängig vom Akkustand, Eingang ab 2V (bis tief in die Entladung)</td><td>DC/DC-Wandler (Boost statt Buck), Poti-Einstellung, Effizienz</td></tr>
+<tr><td><b>DRV8833 Treiber</b></td><td>Fast ohne Spannungsabfall (360mΩ) → <b>6V kommen am Motor an</b>, 95% Effizienz, kein Kühlkörper</td><td>H-Brücke, PWM, Freilauf/Bremse</td></tr>
+<tr><td><b>TP4056 USB-C Lademodul</b></td><td>CC/CV-Ladung 4,2V/1A mit Schutzschaltung (Über-/Unterladung, Kurzschluss) – 0,59€ ab 20 Stück, Laden per handelsüblichem USB-C</td><td>CC/CV-Ladephasen, Ladestrom vs. Kapazität (0,1C), Schutzschaltungen</td></tr>
+<tr><td><b>Female-Header</b></td><td>Alle 24 freien GPIOs steckbar – kein Löten für Addons</td><td>Erweiterbarkeit, Pinbelegung</td></tr>
+</table>
+
+<h3 class="pbreak">1.3 Steckdose auf einen Blick</h3>
+<div class="box callout">
+<div class="two">
+<div><b>CPU:</b> ESP32-WROOM-32E (WiFi+BT) + Arduino Pro Micro (Echtzeit)</div>
+<div><b>Busse:</b> I²C (IO21/IO22) · SPI (IO18/19/23/26) · GPIO (IO16/17) · I²C-Port am Deckel (K5)</div>
+<div><b>Antrieb:</b> 2× N20 6V 1000RPM + DRV8833 (6V vom Boost → ~6V am Motor)</div>
+<div><b>Sensorik:</b> HC-SR04 · 2× VL53L0X · TCS34725 · LSM6DSOX · OLED</div>
+<div><b>Strom:</b> 1S LiPo 3,7V 10Ah → 2× MT3608 Boost (6V/5V) → alles · Lader: USB-C TP4056</div>
+<div><b>Freie Pins:</b> 24 GPIOs auf Female-Header für Addons</div>
+<div><b>Maße:</b> ca. 160 × 160 × 100 mm</div>
+<div><b>Gewicht:</b> ca. 800 g (geschätzt)</div>
+</div>
+</div>
+
+<!-- ==================== 2. AUFBAU ==================== -->
+<h2>2. Aufbau</h2>
+
+<h3>2.1 Stromversorgung (Schaltplan)</h3>
+<svg class="d" viewBox="0 0 940 310" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,Arial,sans-serif">
+<defs>
+<marker id="a1" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="#1e40af"/></marker>
+<marker id="a2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="#dc2626"/></marker>
+<marker id="a3" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="#16a34a"/></marker>
+</defs>
+<rect width="940" height="310" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+<text x="470" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Stromversorgung - Schaltplan</text>
+<text x="470" y="40" text-anchor="middle" font-size="8.5" fill="#64748b">USB-C → TP4056 (4,2V/1A) → 1S LiPo → Schottky → 2× MT3608 Boost → 6V / 5V</text>
+
+<!-- Ladekette -->
+<rect x="15" y="62" width="70" height="42" rx="7" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+<text x="50" y="80" text-anchor="middle" font-size="9" font-weight="bold" fill="#92400e">USB-C</text>
+<text x="50" y="95" text-anchor="middle" font-size="7" fill="#64748b">5V Eingang</text>
+<line x1="85" y1="83" x2="105" y2="83" stroke="#1e40af" stroke-width="2" marker-end="url(#a1)"/>
+
+<rect x="105" y="62" width="125" height="42" rx="7" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+<text x="167" y="77" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#92400e">TP4056 USB-C</text>
+<text x="167" y="90" text-anchor="middle" font-size="7" fill="#64748b">CC/CV 4,2V · 1A</text>
+<text x="167" y="100" text-anchor="middle" font-size="6.5" fill="#92400e">Schutz DW01A</text>
+<line x1="230" y1="83" x2="245" y2="83" stroke="#1e40af" stroke-width="2" marker-end="url(#a1)"/>
+
+<rect x="245" y="56" width="140" height="54" rx="7" fill="#dbeafe" stroke="#1e40af" stroke-width="2"/>
+<text x="315" y="74" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#1e40af">1S LiPo (Fertig-Pack)</text>
+<text x="315" y="89" text-anchor="middle" font-size="7.5" fill="#64748b">3,7V · 10.000mAh · 1160100</text>
+<text x="315" y="103" text-anchor="middle" font-size="7" fill="#1e40af">3,0-4,2V · PCM integriert</text>
+<line x1="385" y1="83" x2="410" y2="83" stroke="#1e40af" stroke-width="2.5" marker-end="url(#a1)"/>
+
+<!-- Knoten -->
+<circle cx="418" cy="83" r="8" fill="#1e40af"/>
+<text x="418" y="86.5" text-anchor="middle" font-size="8" fill="#fff" font-weight="bold">+</text>
+
+<!-- OBERER AST: 6V -->
+<line x1="426" y1="83" x2="455" y2="83" stroke="#dc2626" stroke-width="2" marker-end="url(#a2)"/>
+<rect x="455" y="66" width="65" height="34" rx="5" fill="#fff7ed" stroke="#ea580c" stroke-width="1.2"/>
+<text x="487" y="80" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#c2410c">D1 Schottky</text>
+<text x="487" y="92" text-anchor="middle" font-size="6.5" fill="#64748b">SS14 · ~0,35V</text>
+<line x1="520" y1="83" x2="545" y2="83" stroke="#dc2626" stroke-width="2" marker-end="url(#a2)"/>
+<rect x="545" y="60" width="115" height="46" rx="7" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+<text x="602" y="77" text-anchor="middle" font-size="9" font-weight="bold" fill="#166534">MT3608 #1</text>
+<text x="602" y="91" text-anchor="middle" font-size="7.5" fill="#64748b">Boost → 6V / ~2A</text>
+<text x="602" y="102" text-anchor="middle" font-size="6.5" fill="#16a34a">Poti einstellen</text>
+<line x1="660" y1="83" x2="680" y2="83" stroke="#dc2626" stroke-width="2" marker-end="url(#a2)"/>
+<rect x="680" y="71" width="36" height="24" rx="4" fill="#fee2e2" stroke="#dc2626"/>
+<text x="698" y="87" text-anchor="middle" font-size="9" font-weight="bold" fill="#dc2626">6V</text>
+<line x1="716" y1="83" x2="735" y2="83" stroke="#dc2626" stroke-width="2" marker-end="url(#a2)"/>
+<rect x="735" y="60" width="70" height="46" rx="7" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+<text x="770" y="80" text-anchor="middle" font-size="9" font-weight="bold" fill="#166534">DRV8833</text>
+<text x="770" y="95" text-anchor="middle" font-size="7" fill="#64748b">H-Brücke</text>
+<line x1="805" y1="83" x2="822" y2="83" stroke="#dc2626" stroke-width="2" marker-end="url(#a2)"/>
+<rect x="822" y="60" width="103" height="46" rx="7" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="873" y="77" text-anchor="middle" font-size="8" font-weight="bold" fill="#dc2626">N20 ×2</text>
+<text x="873" y="90" text-anchor="middle" font-size="6.5" fill="#64748b">6V 1000RPM</text>
+<text x="873" y="101" text-anchor="middle" font-size="6.5" fill="#dc2626">mit Encoder</text>
+<text x="602" y="122" text-anchor="middle" font-size="6.5" fill="#64748b">Puffer: 2× 2200µF/10V</text>
+
+<!-- UNTERER AST: 5V -->
+<line x1="418" y1="91" x2="418" y2="178" stroke="#16a34a" stroke-width="2.5"/>
+<line x1="418" y1="178" x2="455" y2="178" stroke="#16a34a" stroke-width="2" marker-end="url(#a3)"/>
+<rect x="455" y="161" width="65" height="34" rx="5" fill="#fff7ed" stroke="#ea580c" stroke-width="1.2"/>
+<text x="487" y="175" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#c2410c">D2 Schottky</text>
+<text x="487" y="187" text-anchor="middle" font-size="6.5" fill="#64748b">SS14 · ~0,35V</text>
+<line x1="520" y1="178" x2="545" y2="178" stroke="#16a34a" stroke-width="2" marker-end="url(#a3)"/>
+<rect x="545" y="155" width="115" height="46" rx="7" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+<text x="602" y="172" text-anchor="middle" font-size="9" font-weight="bold" fill="#166534">MT3608 #2</text>
+<text x="602" y="186" text-anchor="middle" font-size="7.5" fill="#64748b">Boost → 5V / ~2A</text>
+<text x="602" y="197" text-anchor="middle" font-size="6.5" fill="#16a34a">Poti einstellen</text>
+<line x1="660" y1="178" x2="680" y2="178" stroke="#16a34a" stroke-width="2" marker-end="url(#a3)"/>
+<rect x="680" y="166" width="36" height="24" rx="4" fill="#dcfce7" stroke="#16a34a"/>
+<text x="698" y="182" text-anchor="middle" font-size="9" font-weight="bold" fill="#166534">5V</text>
+<line x1="716" y1="178" x2="735" y2="178" stroke="#16a34a" stroke-width="2" marker-end="url(#a3)"/>
+<rect x="735" y="142" width="187" height="72" rx="7" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+<text x="828" y="160" text-anchor="middle" font-size="9" font-weight="bold" fill="#166534">5V-Verbraucher</text>
+<text x="828" y="175" text-anchor="middle" font-size="7.5" fill="#374151">WS2812 LED-Strip (60cm)</text>
+<text x="828" y="188" text-anchor="middle" font-size="7.5" fill="#374151">Arduino Pro Micro</text>
+<text x="828" y="201" text-anchor="middle" font-size="7.5" fill="#374151">ESP32 VIN → AMS1117 → 3,3V</text>
+<text x="828" y="212" text-anchor="middle" font-size="6.5" fill="#64748b">→ alle Sensoren über 3,3V</text>
+<text x="602" y="222" text-anchor="middle" font-size="6.5" fill="#64748b">Puffer: 1000µF/10V · Akku: 100µF</text>
+
+<!-- Zusammenfassung unten -->
+<rect x="15" y="236" width="910" height="64" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+<text x="35" y="254" font-size="9" font-weight="bold" fill="#0f172a">Spannungsniveaus:</text>
+<rect x="35" y="262" width="200" height="26" rx="5" fill="#fee2e2" stroke="#dc2626"/>
+<text x="135" y="279" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#dc2626">6V → DRV8833 → N20-Motoren</text>
+<rect x="250" y="262" width="200" height="26" rx="5" fill="#dcfce7" stroke="#16a34a"/>
+<text x="350" y="279" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#166534">5V → WS2812 + Arduino + ESP32</text>
+<rect x="465" y="262" width="215" height="26" rx="5" fill="#dbeafe" stroke="#1e40af"/>
+<text x="572" y="279" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#1e40af">3,3V → ESP32-Board → Sensoren</text>
+<rect x="695" y="262" width="215" height="26" rx="5" fill="#fff7ed" stroke="#ea580c"/>
+<text x="802" y="279" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#c2410c">Schutz: TP4056/DW01A + 2× Schottky</text>
+<text x="35" y="296" font-size="7" fill="#64748b">Spitzenstrom Batterie: bis ~5-6A (Stall + LEDs volle Helligkeit) → Motorsammelleitung löten (XT30), JST-PH (2A) nur fürs Laden nutzen</text>
+</svg>
+
+<ul style="margin:1mm 0 0 5mm">
+<li><b>Ladung:</b> <a href="https://www.roboter-bausatz.de/p/tp4056-1a-lithium-ionen-lipo-lademodul-fuer-arduino-usb-c">TP4056 USB-C Lademodul</a> (CC/CV, 4,2V/1A, integrierter DW01A-Schutz: Über-/Unterladung + Kurzschluss; rot=lädt, grün=voll). <b>Staffelpreis: 0,59€ ab 20 Stück</b> – Alternativen: <a href="https://makeroo.de/products/3er-set-tp4056-5v-1a-usb-c-lademodul-18650-lithium-akkuladeboard-mit-schutzschaltung">makeroo 3er-Set 1,79€</a>, <a href="https://www.pollin.de/p/daypower-lademodul-fuer-lithium-akkus-m-ll-tp4056-351427">Pollin 1,75€ ab 10</a>. Bei 1S entfallen Balance-Ladung und Zellausgleich komplett.</li>
+<li><b>Akku:</b> 1× flache Zelle <b>3,7V 10.000mAh (1160100, 11×60×100mm)</b> mit integrierter PCM-Schutzplatine, ~160-200g. Einzelzelle = keine Reihenschaltung, keine BMS-Balancelogik nötig. Vorsicht: die JST-PH-Steckverbindung ist nur fürs Laden geeignet (2A) – <b>Motorsammelleitung direkt löten oder XT30 verwenden</b> (Spitzen bis ~6A).</li>
+<li><b>6V Boost:</b> MT3608 (Eingang 2-24V, internes 4A-Schaltstrom-Limit, ~93% Wirkungsgrad) lädt die Ausgangs-Spannung auf konstant 6V – Motoren laufen unabhängig vom Akkustand. Durch den geringen Abfall des DRV8833 (360mΩ) kommen <b>~5,7-6V am Motor an</b> → volles Drehmoment. Kein Kühlkörper nötig.</li>
+<li><b>5V Boost:</b> zweiter MT3608 → WS2812, Arduino und ESP32-VIN. Das ESP32-Board wandelt intern (AMS1117) auf 3,3V für sich und alle Sensoren.</li>
+<li><b>Puffer-Kondensatoren:</b> 2× 2200µF/10V (6V-Schiene), 1000µF/10V (5V-Schiene), 100µF (Akku) glätten die ms-weisen Lastspitzen von PWM/Motoren – ΔV = I·t/C, also ~5ms Puffer bei 1A und 4700µF. Der Boost selbst regelt die Sekundenlast; die Kondensatoren fangen nur die Schaltspitzen ab.</li>
+<li><b>Schottky-Dioden (D1/D2):</b> 2× SS14 (1A/40V) oder SS54 (5A) zwischen Akku und den Boost-Eingängen – Polaritäts- und Ladeschutz, Entkopplung der Schienen. Der ~0,35V Abfall ist unkritisch, da der MT3608 schon ab 2V Eingang arbeitet (auch tief entladene Zelle 3,0V − 0,35V = 2,65V).</li>
+<li><b>Nicht genutzt – und warum:</b> XL6009-Booster brauchen laut Datenblatt ≥3,6V Eingang und würden schon vor Ende der Entladung abschalten; Buck-Wandler (MP2338, LM2596) wären die falsche Topologie, da die Zelle unter der Rails-Spannung liegt. Bei 1S ist Boost die einzige sinnvolle Wahl.</li>
+</ul>
+
+<div class="box callout">
+<b>Achtung Schutzschwellen:</b> Die PCM der Zelle und der DW01A des Lademoduls begrenzen den Entladestrom typischerweise auf 2-3A. Beim Starrfahren können die Motorspitzen darüber liegen – die Schutzschaltung schaltet kurz ab und erholt sich lastfrei (schützendes Verhalten, kein Schaden). Alternativ: Pack mit höherer PCM-Schwelle wählen oder Motorstrom per PWM begrenzen. Zusätzlich begrenzt der MT3608 (4A-Schaltstrom) und die DRV8833-Überlastschaltung den Strom – es kann also nichts durchbrennen, die Motoren werden im Worst Case nur weich abgebremst.
+</div>
+
+<h3 class="pbreak">2.2 Bus-Architektur (I²C + SPI + GPIO)</h3>
+<svg class="d" viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,Arial,sans-serif">
+<defs>
+<marker id="b1" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="#3b82f6"/></marker>
+<marker id="b2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="#16a34a"/></marker>
+<marker id="b3" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="#a855f7"/></marker>
+<marker id="b4" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="#f97316"/></marker>
+</defs>
+<rect width="900" height="400" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+<text x="450" y="24" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">Bus-Architektur - Schaltplan</text>
+<text x="450" y="40" text-anchor="middle" font-size="8.5" fill="#64748b">I²C-Hauptbus · TCA9548A-MUX · SPI · GPIO direkt</text>
+
+<!-- I2C Hauptbus -->
+<rect x="95" y="76" width="600" height="6" rx="3" fill="#3b82f6"/>
+<text x="395" y="71" text-anchor="middle" font-size="8" font-weight="bold" fill="#3b82f6">I²C-Hauptbus · SDA=IO21 · SCL=IO22</text>
+
+<!-- ESP32 -->
+<rect x="15" y="58" width="80" height="44" rx="7" fill="#dbeafe" stroke="#1e40af" stroke-width="1.5"/>
+<text x="55" y="76" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#1e40af">ESP32</text>
+<text x="55" y="91" text-anchor="middle" font-size="7" fill="#64748b">WROOM-32E</text>
+
+<!-- Arduino -->
+<rect x="695" y="58" width="120" height="44" rx="7" fill="#f3e8ff" stroke="#a855f7" stroke-width="1.5"/>
+<text x="755" y="76" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#7c3aed">Arduino Pro Micro</text>
+<text x="755" y="91" text-anchor="middle" font-size="7" fill="#64748b">0x04 · Motor + Encoder</text>
+
+<!-- Arduino → DRV8833+Piezo -->
+<line x1="815" y1="80" x2="840" y2="80" stroke="#a855f7" stroke-width="2" marker-end="url(#b3)"/>
+<rect x="840" y="58" width="55" height="44" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+<text x="867" y="76" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#166534">DRV8833</text>
+<text x="867" y="91" text-anchor="middle" font-size="6.5" fill="#64748b">+ Piezo</text>
+
+<!-- Piezo von Arduino nach unten -->
+<rect x="695" y="115" width="120" height="26" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+<text x="755" y="132" text-anchor="middle" font-size="8" font-weight="bold" fill="#166534">Piezo (PWM)</text>
+<line x1="755" y1="102" x2="755" y2="115" stroke="#16a34a" stroke-width="1.5"/>
+
+<!-- ESP32 runter zum MUX -->
+<line x1="55" y1="102" x2="55" y2="155" stroke="#3b82f6" stroke-width="2"/>
+<line x1="55" y1="155" x2="130" y2="155" stroke="#3b82f6" stroke-width="2" marker-end="url(#b1)"/>
+
+<!-- TCA9548A -->
+<rect x="130" y="135" width="125" height="40" rx="7" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+<text x="192" y="153" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#166534">TCA9548A</text>
+<text x="192" y="168" text-anchor="middle" font-size="7" fill="#64748b">I²C-MUX 0x70</text>
+
+<!-- Sub-Bus -->
+<line x1="255" y1="155" x2="870" y2="155" stroke="#16a34a" stroke-width="2"/>
+<text x="560" y="150" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#16a34a">I²C-Kanäle</text>
+
+<!-- K0-K4 + frei -->
+<rect x="270" y="180" width="90" height="34" rx="5" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+<text x="315" y="194" text-anchor="middle" font-size="7" font-weight="bold" fill="#166534">K0 VL53L0X</text>
+<text x="315" y="207" text-anchor="middle" font-size="6.5" fill="#64748b">links · 0x29</text>
+<line x1="315" y1="155" x2="315" y2="180" stroke="#16a34a" stroke-width="1.5" marker-end="url(#b2)"/>
+
+<rect x="375" y="180" width="90" height="34" rx="5" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+<text x="420" y="194" text-anchor="middle" font-size="7" font-weight="bold" fill="#166534">K1 VL53L0X</text>
+<text x="420" y="207" text-anchor="middle" font-size="6.5" fill="#64748b">rechts · 0x29</text>
+<line x1="420" y1="155" x2="420" y2="180" stroke="#16a34a" stroke-width="1.5" marker-end="url(#b2)"/>
+
+<rect x="480" y="180" width="90" height="34" rx="5" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+<text x="525" y="194" text-anchor="middle" font-size="7" font-weight="bold" fill="#166534">K2 TCS34725</text>
+<text x="525" y="207" text-anchor="middle" font-size="6.5" fill="#64748b">Farbe · 0x29</text>
+<line x1="525" y1="155" x2="525" y2="180" stroke="#16a34a" stroke-width="1.5" marker-end="url(#b2)"/>
+
+<rect x="585" y="180" width="90" height="34" rx="5" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+<text x="630" y="194" text-anchor="middle" font-size="7" font-weight="bold" fill="#166534">K3 LSM6DSOX</text>
+<text x="630" y="207" text-anchor="middle" font-size="6.5" fill="#64748b">IMU · 0x6A</text>
+<line x1="630" y1="155" x2="630" y2="180" stroke="#16a34a" stroke-width="1.5" marker-end="url(#b2)"/>
+
+<rect x="690" y="180" width="90" height="34" rx="5" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+<text x="735" y="194" text-anchor="middle" font-size="7" font-weight="bold" fill="#166534">K4 SSD1306</text>
+<text x="735" y="207" text-anchor="middle" font-size="6.5" fill="#64748b">OLED · 0x3C</text>
+<line x1="735" y1="155" x2="735" y2="180" stroke="#16a34a" stroke-width="1.5" marker-end="url(#b2)"/>
+
+<rect x="795" y="180" width="75" height="34" rx="5" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+<text x="832" y="194" text-anchor="middle" font-size="7" font-weight="bold" fill="#166534">K5 → Port</text>
+<text x="832" y="207" text-anchor="middle" font-size="6.5" fill="#64748b">Oberfläche</text>
+<line x1="832" y1="155" x2="832" y2="180" stroke="#16a34a" stroke-width="1.5" marker-end="url(#b2)"/>
+<line x1="832" y1="214" x2="832" y2="224" stroke="#16a34a" stroke-width="1.5"/>
+<rect x="775" y="224" width="115" height="30" rx="5" fill="#e0e7ff" stroke="#4338ca" stroke-width="1.2"/>
+<text x="832" y="237" text-anchor="middle" font-size="6.5" font-weight="bold" fill="#4338ca">4-pol. Buchse (Deckel)</text>
+<text x="832" y="248" text-anchor="middle" font-size="6" fill="#64748b">3,3V · GND · SDA · SCL</text>
+
+<!-- HC-SR04 direkt -->
+<line x1="55" y1="102" x2="55" y2="255" stroke="#f97316" stroke-width="2.5"/>
+<rect x="15" y="255" width="175" height="48" rx="7" fill="#fff7ed" stroke="#f97316" stroke-width="2"/>
+<text x="102" y="274" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#c2410c">HC-SR04 Ultraschall</text>
+<text x="102" y="288" text-anchor="middle" font-size="7" fill="#64748b">Trig=IO16 · Echo=IO17</text>
+<text x="102" y="300" text-anchor="middle" font-size="6.5" fill="#f97316">Direkt GPIO - kein I²C!</text>
+<text x="210" y="270" font-size="7.5" font-weight="bold" fill="#f97316">GPIO</text>
+
+<!-- microSD -->
+<line x1="55" y1="303" x2="55" y2="330" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/>
+<rect x="15" y="330" width="175" height="30" rx="6" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+<text x="102" y="349" text-anchor="middle" font-size="8" font-weight="bold" fill="#c2410c">microSD · SPI CS=IO26</text>
+<text x="210" y="349" font-size="7" fill="#f97316">SCK=IO18 MISO=IO19 MOSI=IO23</text>
+
+<!-- Legende -->
+<rect x="250" y="255" width="635" height="110" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+<text x="270" y="275" font-size="9" font-weight="bold" fill="#0f172a">Legende</text>
+<line x1="270" y1="292" x2="315" y2="292" stroke="#3b82f6" stroke-width="2.5"/>
+<text x="325" y="296" font-size="8" fill="#3b82f6">I²C-Hauptbus (IO21/IO22)</text>
+<line x1="270" y1="312" x2="315" y2="312" stroke="#16a34a" stroke-width="2"/>
+<text x="325" y="316" font-size="8" fill="#166534">I²C-Kanäle (TCA9548A)</text>
+<line x1="270" y1="332" x2="315" y2="332" stroke="#f97316" stroke-width="2"/>
+<text x="325" y="336" font-size="8" fill="#f97316">GPIO / SPI direkt</text>
+<rect x="530" y="285" width="14" height="10" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+<text x="552" y="294" font-size="8" fill="#166534">I²C-Gerät am MUX</text>
+<rect x="530" y="305" width="14" height="10" rx="2" fill="#fef3c7" stroke="#f59e0b"/>
+<text x="552" y="314" font-size="8" fill="#92400e">Freie Kanäle K6/K7</text>
+<rect x="530" y="325" width="14" height="10" rx="2" fill="#fff7ed" stroke="#f97316"/>
+<text x="552" y="334" font-size="8" fill="#c2410c">Direkter GPIO-Anschluss</text>
+</svg>
+
+<p class="small"><b>I²C-Adressen:</b> TCA9548A=0x70 · VL53L0X=0x29 (K0+K1) · TCS34725=0x29 (K2) · LSM6DSOX=0x6A (K3) · SSD1306=0x3C (K4). <b>Nicht belegt:</b> z.B. 0x20-0x28, 0x38-0x3B, 0x3D-0x3F, 0x6B-0x6F, 0x71-0x77. <b>HC-SR04:</b> kein I²C - direkt GPIO, 40kHz, 3-400cm; <b>Echo kommt mit 5V → Spannungsteiler 10kΩ/20kΩ vor IO17</b> (ESP32-GPIOs sind nicht 5V-tolerant!).</p>
+<p class="small"><b>Versorgung:</b> Alle I²C-Sensoren laufen mit <b>3,3V direkt vom ESP32-Board</b> (Board-Regler AMS1117, Eingang 5V) – Gesamtverbrauch nur ~60mA, daher ist <b>kein dritter Wandler nötig</b>. Ein separater 3,3V-Wandler wäre nur nötig bei &gt;800mA Sensorlast oder als entkoppelte Rausch-Schiene.</p>
+<p class="small"><b>Oberflächen-Port (K5):</b> 4-pol. Buchse <b>auf dem Deckel</b> (3,3V · GND · SDA · SCL) führt den I²C-Bus nach außen – für externe Module (BME280, Lichtsensor, Erweiterungen) ohne Löten. Angeschlossen an den <b>freien MUX-Kanal K5</b>: externe Geräte sind vom Hauptbus isoliert, daher <b>keine Adresskonflikte</b> mit den Bord-Sensoren (gleiche Adresse 0x29 z.B. möglich). Software: <code>tca.selectChannel(5)</code>. K6/K7 bleiben zusätzlich frei. Alternative Verdrahtung: Port direkt auf IO21/IO22 (Hauptbus) – dann nur Geräte ohne Adresskonflikt verwenden.</p>
+
+<h3 class="pbreak">2.3 Pin-Plan ESP32 (34 GPIO)</h3>
+
+<h4>Feste Belegung (10 Pins)</h4>
+<table>
+<tr><th>GPIO</th><th>Funktion</th><th>GPIO</th><th>Funktion</th></tr>
+<tr><td>IO21</td><td>I2C SDA (alle Sensoren, OLED)</td><td>IO22</td><td>I2C SCL</td></tr>
+<tr><td>IO18</td><td>SPI SCK (microSD)</td><td>IO19</td><td>SPI MISO</td></tr>
+<tr><td>IO23</td><td>SPI MOSI</td><td>IO26</td><td>SPI CS_SD</td></tr>
+<tr><td>IO1</td><td>WS2812-Daten</td><td>IO5</td><td>Strapping (digital)</td></tr>
+<tr style="background:#fff7ed"><td><b>IO16</b></td><td><b>HC-SR04 Trig</b></td><td><b>IO17</b></td><td><b>HC-SR04 Echo</b> (über Spannungsteiler 10kΩ/20kΩ!)</td></tr>
+</table>
+
+<h4>Encoder + Motor → Arduino Pro Micro</h4>
+<table>
+<tr><th>Arduino Pin</th><th>Funktion</th><th>Bemerkung</th></tr>
+<tr><td>Pin 2, 4</td><td>Encoder 1 A/B</td><td>HAT-Interrupt + PCINT</td></tr>
+<tr><td>Pin 7, 8</td><td>Encoder 2 A/B</td><td>PCINT</td></tr>
+<tr><td>Pin 3, 6</td><td>DRV8833 AIN1 / AIN2 (Motor links)</td><td>PWM: Richtung + Geschwindigkeit</td></tr>
+<tr><td>Pin 5, 9</td><td>DRV8833 BIN1 / BIN2 (Motor rechts)</td><td>PWM: Richtung + Geschwindigkeit</td></tr>
+<tr><td>Pin 10</td><td>Piezo Speaker</td><td>PWM / Tone</td></tr>
+<tr><td>A4 / A5</td><td>I²C (gemeinsam mit ESP32)</td><td>Adresse 0x04</td></tr>
+</table>
+
+<div class="box callout">
+<b>Warum Arduino?</b> Encoder-Abfrage und Motor-PWM brauchen Echtzeit-Interrupts. Der ESP32 kümmert sich um WiFi, I²C, SPI und Sensoren. Der Arduino empfängt I²C-Befehle (z.B. "MOTOR:150:200") und steuert Motoren + Töne. IO16/IO17 bleiben für den Ultraschallsensor frei.
+</div>
+
+<h4>Freie GPIOs (24 Pins) → Female-Header</h4>
+<p class="small">Alle 24 freien Pins stehen auf einer Female-Header-Leiste für Addons - kein Löten nötig.</p>
+<table>
+<tr><th>GPIO</th><th>Typ</th><th>GPIO</th><th>Typ</th></tr>
+<tr style="background:#fff5e0"><td>IO0</td><td>Strapping (BOOT)</td><td>IO2</td><td>Strapping</td></tr>
+<tr><td>IO3</td><td>digital</td><td style="background:#fff5e0">IO4</td><td>Strapping</td></tr>
+<tr style="background:#fff5e0"><td>IO12</td><td>Strapping (VDD_SDIO)</td><td>IO13</td><td>digital</td></tr>
+<tr><td>IO14</td><td>digital</td><td style="background:#fff5e0">IO15</td><td>Strapping</td></tr>
+<tr><td>IO20, IO24</td><td>digital</td><td>IO25</td><td>DAC1 / ADC2</td></tr>
+<tr><td>IO27</td><td>TOUCH7 / ADC2</td><td>IO28-31</td><td>digital</td></tr>
+<tr><td>IO32, IO33</td><td>TOUCH + ADC1</td><td>IO34-39</td><td>ADC1 (input-only)</td></tr>
+</table>
+<p class="small"><b>Orange</b> = Strapping-Pin (Boot-Level beachten!). <b>Ergebnis:</b> 34 GPIO gesamt - 10 fest = <b>24 frei</b>.</p>
+
+<h3 class="pbreak">2.4 Treibermodul-Vergleich: DRV8833 vs L298N</h3>
+<table>
+<tr><th>Merkmal</th><th>DRV8833 (gewählt)</th><th>L298N (Alternative)</th></tr>
+<tr><td>Technologie</td><td>N-MOSFET</td><td>Bipolar (BJT)</td></tr>
+<tr><td>Spannung</td><td>2,7-10,8V (passt zur 6V-Schiene)</td><td>5-46V (nur sinnvoll ab 2S – bei 1S ungeeignet)</td></tr>
+<tr><td>Strom/Kanal</td><td>1,2A (dau), 2A (Spitze)</td><td>2A (dau), 3A (Spitze)</td></tr>
+<tr><td>Spannungsabfall</td><td class="good">~0,2V (360mΩ)</td><td class="warn">~1,4-2V (heiß!)</td></tr>
+<tr><td>Spannung am Motor</td><td class="good">~5,8-6V → volles Drehmoment</td><td class="warn">~4,2V (-30%)</td></tr>
+<tr><td>Effizienz</td><td class="good">~95%</td><td>~70%</td></tr>
+<tr><td>Kühlkörper</td><td class="good">Nicht nötig</td><td>Nötig (&gt;0,5A)</td></tr>
+<tr><td>Strombegrenzung</td><td class="good">integriert (Schutz vor Überlast)</td><td>keine</td></tr>
+<tr><td>Steuerung</td><td>2 IN-Pins pro Motor, PWM = Tempo, kein EN</td><td>2 Richtungs + 1 EN-Pin</td></tr>
+<tr><td>Preis</td><td>6,55 € (BerryBase)</td><td class="good">2,30 € (Reichelt)</td></tr>
+<tr><td>Dokumentation</td><td>Gut (TI-Datenblatt + Adafruit/Pololu)</td><td class="good">Extrem breit (Tutorials)</td></tr>
+<tr class="sum"><td><b>Fazit</b></td><td><b>Gewählt: 6V am Motor, effizient, kühl</b></td><td>Billiger, aber ~1,5V + Wärme verloren</td></tr>
+</table>
+
+<h4>Steuertabelle DRV8833 (je Motor)</h4>
+<table>
+<tr><th>IN1</th><th>IN2</th><th>Funktion</th></tr>
+<tr><td>0</td><td>0</td><td><b>Freilauf</b> – Ausgänge Hi-Z, Motor rollt aus</td></tr>
+<tr><td>1</td><td>1</td><td><b>Bremse</b> – Kurzschluss, schneller Stop</td></tr>
+<tr><td>1</td><td>0</td><td><b>Vorwärts</b> (bei vertauschten Motordrähten gedreht)</td></tr>
+<tr><td>0</td><td>1</td><td><b>Rückwärts</b></td></tr>
+<tr><td>PWM</td><td>0</td><td><b>Vorwärts + Geschwindigkeit</b> (duty = Tempo), bei 0 → freilaufen</td></tr>
+</table>
+<p class="small">Belegung: Motor links = AIN1 (Pin 3) / AIN2 (Pin 6), Motor rechts = BIN1 (Pin 5) / BIN2 (Pin 9) – alle PWM-fähig. SLEEP muss HIGH sein (Modul-Pull-up). Günstige Alternative: <a href="https://www.reichelt.de/de/de/shop/produkt/entwicklerboards_-_motorsteuerung_2-fach_l298n-282644">L298N für 2,30 € (Reichelt)</a> – dann aber nur ~4,2V am Motor, Kühlkörper, ENA/ENB-Pins und ≥5V Schiene nötig (bei 1S-Strompfad also ungeeignet).</p>
+
+<!-- ==================== 3. TEILLISTE ==================== -->
+<h2>3. Teilliste</h2>
+<p class="small">Alle Händler: deutsche/EU-Anbieter, Stand: 28.09.2026. Preise inkl. MwSt., <b>Staffelpreise eingerechnet</b> (Mengenrabatte für 20 Roboter), Versandkosten nicht enthalten. Pro Bauteil mindestens zwei Quellen – die günstigste Variante steht vorne.</p>
+
+<h3>3.1 Komponenten pro Roboter (1×)</h3>
+<table>
+<tr><th>#</th><th>Komponente</th><th>Kurzdaten</th><th>Preis</th><th>Quellen (Links)</th><th>Staffel</th></tr>
+<tr><td>1</td><td>ESP32-WROOM-32E</td><td>240MHz, WiFi+BT, 34 GPIO, USB-C</td><td class="good">11,20 €</td><td><a href="https://www.reichelt.de/de/de/shop/produkt/entwicklungsboard_esp32-wroom-32e-341303">Reichelt</a> · <a href="https://www.conrad.de/de/p/espressif-esp32-devkitc-32e-entwickler-platine-esp32-devkitc-32e-2814007.html">Conrad 11,99€</a> · <a href="https://shop.schukat.com/de/de/EUR/Entwicklungstool-WLAN-Bluetooth/Espressif-Systems/ESP32-DEVKITC-32E/p/90255">Schukat (B2B ab ~7,79€ netto)</a></td><td>Staffel Schukat</td></tr>
+<tr><td>2</td><td>Arduino Pro Micro</td><td>ATmega32U4, 5V/16MHz, 18 GPIO</td><td>8,75 €</td><td><a href="https://www.reichelt.de/de/de/shop/produkt/arduino_kompatibles_micro_pro_board_atmega32u4_usb-330660">Reichelt (JOY-IT)</a> · <a href="https://www.conrad.de/de/p/joy-it-ard-32u4-usb-c-arduino-board-atmega32-3588331.html">Conrad (USB-C)</a></td><td>-</td></tr>
+<tr><td>3</td><td>DRV8833 Treiber</td><td>Dual H-Bridge, 1,2A/ch, 360mΩ, PWM + Freilauf/Bremse</td><td>6,55 €</td><td><a href="https://www.berrybase.de/adafruit-drv8833-dc-stepper-motor-treiber-breakout-board">BerryBase (Adafruit 3297)</a> · <a href="https://botland.de/dc-motortreiber/546-drv8833-zweikanal-motorsteuerung-108-v-12-a-pololu-2130-5904422367213.html">Botland (Pololu 2130, 8,50€)</a></td><td>-</td></tr>
+<tr><td>4</td><td>2× N20 Motor+Encoder</td><td><b>6V, 1000RPM</b>, Hall-Encoder, Metall</td><td>~18,98 €</td><td><a href="https://www.hestore.eu/de/prod_10042892.html">HESTORE 9,49€/Stk</a> · <a href="https://kamami.pl/en/micro-metal-gearmotors/582334-1000rpm-6v-n20e-miniature-motor-with-gear-and-encoder-5906623459582.html">Kamami ~11,50€</a> · AliExpress ~5-9€</td><td class="good">HESTORE 20+ = 7,98€ netto</td></tr>
+<tr><td>5</td><td>HC-SR04 Ultraschall</td><td>3-400cm, 5V, Trig+Echo, ±3mm</td><td>1,49 €</td><td><a href="https://www.berrybase.de/hc-sr04-ultraschall-sensor">BerryBase</a> · <a href="https://www.roboter-bausatz.de/p/hc-sr04-ultraschallsensor-mit-montagewinkel">roboter-bausatz (1,75€ ab 20, mit Winkel)</a> · <a href="https://funduinoshop.com/elektronische-module/sensoren/bewegungs-und-distanzsensoren/ultraschallsensor-entfernungssensor-hc-sr04">Funduino 1,74€</a></td><td>rb ab 20: 1,75€</td></tr>
+<tr><td>6</td><td>2× VL53L0X ToF</td><td>30mm-2m, I2C 0x29 (links+rechts)</td><td class="good">7,20 €</td><td><a href="https://www.makershop.de/sensoren/distanz/gy-530-vl53l0x/">Makershop GY-530 3,60€</a> · <a href="https://www.makershop.de/sensoren/distanz/adafruit-vl53l0x/">Makershop (Adafruit) 14,85€</a> · <a href="https://www.berrybase.de/pololu-vl53l0x-time-of-flight-distanzsensor-mit-spannungsregler-bis-200cm">BerryBase (Pololu) 19,95€</a></td><td>-</td></tr>
+<tr><td>7</td><td>TCA9548A MUX</td><td>8 I²C-Kanäle, 0x70</td><td>2,30 €</td><td><a href="https://www.berrybase.de/tca9548a-i2c-multiplexer-breakout-board">BerryBase</a> · <a href="https://funduinoshop.com/elektronische-module/schnittstellen-konverter/signalwandler/tca9548a-i2c-multiplexer">Funduino 2,15€</a> · <a href="https://www.reichelt.de/de/de/shop/produkt/entwicklerboards_-_i2c-multiplexer_tca9548a-291436">Reichelt 2,80€</a></td><td>-</td></tr>
+<tr><td>8</td><td>LSM6DSOX IMU</td><td>6-Achsen, 0x6A, ±16g/±2000dps</td><td>11,90 €</td><td><a href="https://www.berrybase.de/adafruit-lsm6dsox-6-dof-beschleugnigunssensor-und-gyroskop">BerryBase (Adafruit 4438)</a> · <a href="https://www.adafruit.com/product/4438">Adafruit 11,95$</a> · <a href="https://eckstein-shop.de/Adafruit-LSM6DSOX-6-DoF-Accelerometer-and-Gyroscope-STEMMA-QT-Qwiic">eckstein 14,40€</a></td><td>-</td></tr>
+<tr><td>9</td><td>TCS34725 Farbsensor</td><td>RGB+Clear, IR-Filter, I2C, LED, 400kHz</td><td>6,99 €</td><td><a href="https://www.az-delivery.de/en/products/tcs34725-rgb-color-sensor">AZ-Delivery</a> (3er 13,99€ · 5er 19,99€ = 4,00€/Stk)</td><td class="good">5er-Set = 4,00€</td></tr>
+<tr><td>10</td><td>0,96" OLED SSD1306</td><td>128×64, I2C 0x3C</td><td>4,66 €</td><td><a href="https://funduinoshop.com/elektronische-module/displays/oled/oled-0.96-128x64-gvss-i2c">Funduino</a> · <a href="https://www.reichelt.de/de/de/shop/produkt/entwicklerboards_-_display_0_96_oled-display_ssd1306-266107">Reichelt (JOY-IT) 6,99€</a> · <a href="https://www.reichelt.de/de/de/shop/produkt/entwicklerboards_-_display_0_96_oled-display_ssd1306-372147">Reichelt (Soldered) 8,85€</a></td><td>-</td></tr>
+<tr><td>11</td><td>microSD-Modul</td><td>SPI, 3,3V/5V, bis 32GB</td><td>1,40 €</td><td><a href="https://www.berrybase.de/micro-sd-card-reader-modul-mit-spi-schnittstelle">BerryBase</a> · <a href="https://makeroo.de/products/micro-sd-card-reader-modul-mit-spi-interface-fur-arduino">makeroo 1,19€</a> · <a href="https://www.reichelt.de/de/de/shop/produkt/entwicklerboards_-_breakout-board_fuer_microsd-karten-376529">Reichelt (Soldered) 3,99€</a></td><td>-</td></tr>
+<tr><td>12</td><td>WS2812-Strip 60cm</td><td>5V, 60 LED/m, ~36 LED pro Roboter</td><td>~2,24 €</td><td><a href="https://www.amazon.de/gp/aw/d/B088BPGMXB">Amazon (BTF 5m/300LED = 18,69€)</a> · <a href="https://www.reichelt.de/de/de/shop/produkt/led-streifen_digital_rgb_300_leds_5_m_ws2812b-260971">Reichelt (5m) 87,99€</a></td><td>12m gesamt = 3 Rollen</td></tr>
+<tr><td>13</td><td>Piezo-Summer</td><td>passiv, 5V, PWM</td><td>1,20 €</td><td><a href="https://www.reichelt.de/de/de/shop/produkt/entwicklerboards_-_summer_passiv-282662">Reichelt</a> · <a href="https://www.berry-base.com/ky-006-passives-buzzer-modul">BerryBase (KY-006)</a></td><td>-</td></tr>
+<tr><td>14</td><td>LiPo 1S 3,7V 10Ah</td><td>flach 1160100 (11×60×100mm), PCM, ~160-200g, JST-PH</td><td>19,79 €</td><td><a href="https://www.amazon.de/dp/B0CSS4FFHC">Amazon (19,79€)</a> · <a href="https://www.reichelt.de/de/de/shop/produkt/li-ion_akku_soldered_333290_10000_mah_3_7_v-373554">Reichelt (22,80€)</a> · <a href="https://ydlbattery.com/products/1160100-10000mah-li-ion-battery">YDL (ab 10 Stk: 7,50$ ≈ 6,90€, +Versand/Zoll)</a></td><td class="good">YDL 10+: −25%</td></tr>
+<tr><td>15</td><td>TP4056 USB-C Lader</td><td>CC/CV 4,2V/1A, DW01A-Schutz, LED-Anzeige</td><td class="good">0,59 €</td><td><a href="https://www.roboter-bausatz.de/p/tp4056-1a-lithium-ionen-lipo-lademodul-fuer-arduino-usb-c">roboter-bausatz (0,59€ ab 20)</a> · <a href="https://makeroo.de/products/3er-set-tp4056-5v-1a-usb-c-lademodul-18650-lithium-akkuladeboard-mit-schutzschaltung">makeroo (3er 1,79€ = 0,60€)</a> · <a href="https://www.pollin.de/p/daypower-lademodul-fuer-lithium-akkus-m-ll-tp4056-351427">Pollin (1,75€ ab 10)</a></td><td class="good">rb ab 20: −43%</td></tr>
+<tr><td>16</td><td>2× MT3608 Boost</td><td>2-24V ein, 4A Schaltstrom, einstellbar (6V + 5V)</td><td class="good">1,78 €</td><td><a href="https://www.roboter-bausatz.de/p/spannungswandler-mt3608-dc-dc-step-up-modul-2a-2v-28v">roboter-bausatz (0,89€ ab 20)</a> · <a href="https://www.androegg.de/shop/mt3608-usb-micro-step-up-spannungs-voltage-konverter/">androegg 1,29€</a> · <a href="https://eckstein-shop.de/MT3608DC-DCAdjustableStep-upSpannungsreglerBoostVoltageRegulator2V-24VEN">eckstein 1,75€</a></td><td class="good">rb ab 20: −29%</td></tr>
+<tr><td>17</td><td>Schottky + Elkos + Widerstände</td><td>2× SS14/SS54, 2×2200µF+1000µF+100µF, Teiler 10k/20k, Buchsen</td><td>~2 €</td><td><a href="https://www.reichelt.de/de/de/shop/produkt/schottkydiode_40_v_5_a_do-214ab_smc-146598">Reichelt</a> · <a href="https://www.berrybase.de/">BerryBase</a></td><td>Widerstände/Elkos ggf. 50er-Packs</td></tr>
+<tr><td>18</td><td>Ketten-Chassis</td><td>Alu/Rahmen + Gummiketten, 6V-N20-kompatibel</td><td>27,90 €</td><td><a href="https://botland.de/roboter-chassis/15103-black-gladiator-kettenroboterchassis-mit-antrieb-dfrobot-rob0153-6959420915026.html">Botland (Black Gladiator)</a> · <a href="https://funduinoshop.com/werkstatt/bausaetze/chassis/stabiles-tank-chassis/kettenfahrzeug-tp101/roboter-kit-mit-12v-motoren-fuer-arduino-geeignet">Funduino (TP101) 31,46€</a> · <a href="https://www.amazon.de/dp/B0FLWGYVQ2">Amazon (Abaodam)</a> · <a href="https://botland.de/roboter-chassis/6610-dfrobot-devastator-kettenroboter-chassis-metallmotoren-6959420910250.html">Botland (Devastator) 89,50€</a></td><td>Staffel prüfen</td></tr>
+<tr><td>19</td><td>PCB + Female Headers</td><td>Trägerplatine, Pinheader, Buchsen</td><td>15-40 €</td><td><a href="https://jlcpcb.com/">JLCPCB</a> · <a href="https://www.eurocircuits.com/">Eurocircuits</a></td><td class="good">20-platten-Rabatt</td></tr>
+<tr class="sum"><td colspan="3"><b>Summe pro Roboter</b></td><td><b>~150-235 €</b></td><td colspan="2">Elektronik ~106€ · Chassis 28-90€ · PCB 15-40€</td></tr>
+</table>
+
+<h3>3.2 Massenbestellung 20 Roboter (Staffelpreise angewendet)</h3>
+<table>
+<tr><th>Komponente</th><th>Menge (20×)</th><th>Einzelpreis</th><th>Gesamt</th><th>Quelle / Rabatt</th></tr>
+<tr><td>ESP32-WROOM-32E</td><td>20 Stk</td><td>11,20 €</td><td>224,00 €</td><td>Reichelt (günstiger: Schukat B2B ~186€)</td></tr>
+<tr><td>Arduino Pro Micro</td><td>20 Stk</td><td>8,75 €</td><td>175,00 €</td><td>Reichelt JOY-IT</td></tr>
+<tr><td>DRV8833 Treiber</td><td>20 Stk</td><td>6,55 €</td><td>131,00 €</td><td>BerryBase (Botland Pololu: 170€)</td></tr>
+<tr><td>N20 Motor+Encoder</td><td>40 Stk</td><td>9,49 €</td><td>379,60 €</td><td>HESTORE Staffel 20+ (netto 7,98€); Ali-Variante ~240€</td></tr>
+<tr><td>HC-SR04</td><td>20 Stk</td><td>1,49 €</td><td>29,80 €</td><td>BerryBase (100+ Lager)</td></tr>
+<tr><td>VL53L0X ToF (GY-530)</td><td>40 Stk</td><td>3,60 €</td><td class="good">144,00 €</td><td>Makershop – statt 400€ (Adafruit) → <b>−256€</b></td></tr>
+<tr><td>TCA9548A MUX</td><td>20 Stk</td><td>2,30 €</td><td>46,00 €</td><td>BerryBase (Funduino: 43€)</td></tr>
+<tr><td>LSM6DSOX IMU</td><td>20 Stk</td><td>11,90 €</td><td>238,00 €</td><td>BerryBase (Adafruit-Direktbestellung ähnlich)</td></tr>
+<tr><td>TCS34725</td><td>4× 5er-Set</td><td>4,00 €/Stk</td><td>79,96 €</td><td>AZ-Delivery Staffel (5er = 19,99€)</td></tr>
+<tr><td>OLED SSD1306</td><td>20 Stk</td><td>4,66 €</td><td>93,20 €</td><td>Funduino (Reichelt JOY-IT: 139,80€)</td></tr>
+<tr><td>microSD-Modul</td><td>20 Stk</td><td>1,40 €</td><td>28,00 €</td><td>BerryBase</td></tr>
+<tr><td>WS2812-Strip (3×5m)</td><td>15 m</td><td>18,69 €/5m</td><td>56,07 €</td><td>Amazon BTF-LIGHTING (Reichelt-Variante: 176€)</td></tr>
+<tr><td>Piezo</td><td>20 Stk</td><td>1,20 €</td><td>24,00 €</td><td>Reichelt</td></tr>
+<tr><td>LiPo 1S 10Ah</td><td>20 Stk</td><td>19,79 €</td><td>395,80 €</td><td>Amazon B0CSS4FFHC (YDL-Alt ab 10: ~137€ + Versand)</td></tr>
+<tr><td>TP4056 USB-C</td><td>20 Stk</td><td>0,59 €</td><td>11,80 €</td><td>roboter-bausatz Staffel ab 20 (−43%)</td></tr>
+<tr><td>MT3608 Boost</td><td>40 Stk</td><td>0,89 €</td><td>35,60 €</td><td>roboter-bausatz Staffel ab 20 (−29%)</td></tr>
+<tr><td>Schottky/Elko/Widerstände</td><td>20× Satz</td><td>~2,00 €</td><td>40,00 €</td><td>Reichelt/BerryBase</td></tr>
+<tr><td>Ketten-Chassis</td><td>20 Stk</td><td>27,90 €</td><td>558,00 €</td><td>Botland Black Gladiator (Funduino: 629€ · Devastator: 1.790€)</td></tr>
+<tr><td>PCB + Female Headers</td><td>20×</td><td>15-40 €</td><td>300-800 €</td><td>JLCPCB/Eurocircuits</td></tr>
+<tr class="sum"><td><b>Summe 20 Roboter</b></td><td></td><td></td><td><b>~3.000-3.500 €</b></td><td>pro Stück: <b>~150-175 €</b> (teure Chassis-Variante: ~200€)</td></tr>
+</table>
+<p class="small"><b>Die größten Kostentreiber:</b> LiPo (396€, ~19%), Chassis (558€, ~27%), N20 (380€), ESP32 (224€). Die Umstellung von 2S auf 1S spart nicht nur Akkuzellen (20 statt 40 Packs), sondern auch BMS und USB-2S-Lader – zusammen ~300-400€ weniger. Größter Einzelsparhebel: ToF-Sensoren als GY-530 statt Adafruit (−256€) und MT3608-Booster mit Staffelpreis statt teurer Ali-Module.</p>
+
+<!-- ==================== 4. DATENBLATT ==================== -->
+<h2>4. Datenblatt</h2>
+
+<h3>4.1 Abmessungen & Gewicht</h3>
+<table>
+<tr><th>Parameter</th><th>Wert</th><th>Bemerkung</th></tr>
+<tr><td><b>Bauform (Gesamt)</b></td><td><b>160 × 160 × 100 mm</b></td><td>L × B × H (ca. 16×16×10 cm)</td></tr>
+<tr><td>Chassis-Platte</td><td>~150 × 150 × 3 mm</td><td>Aluminium, 2-mm-Rand für Ketten</td></tr>
+<tr><td>Kettenlänge (je Seite)</td><td>~150 mm</td><td>Gummikette, 9 Glieder</td></tr>
+<tr><td>Bodenfreiheit</td><td>~15 mm</td><td>ausreichend für Bodensensor</td></tr>
+<tr><td><b>Gewicht geschätzt</b></td><td><b>~800 g</b></td><td>siehe Aufschlüsselung unten</td></tr>
+</table>
+
+<table>
+<tr><th>Bauteil</th><th>Gewicht (ca.)</th></tr>
+<tr><td>Chassis (Alu-Platte 150×150×3mm)</td><td>180 g</td></tr>
+<tr><td>2× Gummiketten + Räder</td><td>120 g</td></tr>
+<tr><td>2× N20 Motor + Getriebe</td><td>100 g</td></tr>
+<tr><td>1× LiPo 3,7V 10Ah (1160100, flach)</td><td>180 g</td></tr>
+<tr><td>Elektronik (ESP32, Arduino, PCB, Sensoren)</td><td>120 g</td></tr>
+<tr><td>DRV8833 + 2× MT3608 + TP4056 + Verkabelung</td><td>50 g</td></tr>
+<tr><td>WS2812-Strip, OLED, microSD, Piezo, Schrauben</td><td>50 g</td></tr>
+<tr class="sum"><td><b>Gesamt</b></td><td><b>~800 g</b></td></tr>
+</table>
+
+<h3>4.2 Stromverbrauch & Laufzeit</h3>
+<table>
+<tr><th>Schiene</th><th>Verbraucher</th><th>Typ. mA</th><th>Spitze mA</th></tr>
+<tr style="background:#fee2e2"><td rowspan="2"><b>6V</b> (MT3608 #1)</td><td>2× N20 Motor (Fahrt)</td><td>200</td><td>1.100 (Stall)</td></tr>
+<tr style="background:#fee2e2"><td>DRV8833 (Iq + Logik)</td><td>2</td><td>6</td></tr>
+<tr style="background:#dcfce7"><td rowspan="5"><b>5V</b> (MT3608 #2)</td><td>WS2812 Strip (60cm, dimm)</td><td>360</td><td>1.800</td></tr>
+<tr style="background:#dcfce7"><td>ESP32 (WiFi aktiv, via VIN)</td><td>280</td><td>350</td></tr>
+<tr style="background:#dcfce7"><td>Arduino Pro Micro</td><td>30</td><td>50</td></tr>
+<tr style="background:#dcfce7"><td>HC-SR04</td><td>15</td><td>15</td></tr>
+<tr style="background:#dcfce7"><td>Piezo + Sensoren (über AMS1117)</td><td>75</td><td>130</td></tr>
+<tr class="sum"><td colspan="2"><b>Schiene gesamt (Ausgang)</b></td><td><b>≈ 4,7 W</b></td><td><b>≈ 17,8 W</b></td></tr>
+<tr class="sum"><td colspan="2"><b>Batteriestrom (3,7V, η≈0,9)</b></td><td><b>≈ 1,4 A</b></td><td><b>≈ 6 A</b> (bei 3,5V/η 0,85)</td></tr>
+</table>
+
+<table>
+<tr><th>Szenario</th><th>Strom (Batterie)</th><th>Laufzeit (10.000 mAh)</th></tr>
+<tr><td>Dauerfahrt + WS2812 volle Helligkeit</td><td>≈ 3,6 A</td><td>≈ 2,7 h</td></tr>
+<tr><td>Dauerfahrt + WS2812 dimm (50%)</td><td>≈ 1,4 A</td><td class="good">≈ 6-7 h</td></tr>
+<tr><td>Dauerfahrt + LEDs aus</td><td>≈ 0,85 A</td><td class="good">≈ 11 h</td></tr>
+<tr><td>Standby (keine Motoren, WiFi, dimm)</td><td>≈ 0,5 A</td><td>≈ 20 h</td></tr>
+<tr><td>Standby (keine Motoren, WiFi aus)</td><td>≈ 0,2 A</td><td>≈ 50 h</td></tr>
+<tr><td>Deep-Sleep</td><td>≈ 1-5 mA</td><td>≈ 2-8 Wochen</td></tr>
+</table>
+<p class="small"><b>Umrechnung:</b> Batteriestrom = (6V×I<sub>6V</sub> + 5V×I<sub>5V</sub>) / 3,7V / η, Wirkungsgrad η ≈ 0,9 der MT3608-Booster. Für Spitzen gilt 3,5V (Tiefentladung) und η ≈ 0,85 → deshalb bis ~6A Batteriestrom. Die 3,3V-Verbraucher sind in der 5V-Schiene enthalten (über ESP32-VIN + AMS1117). Vergleich 2S: bei 7,4V wäre der Batteriestrom halb so groß – bei 1S steigt er entsprechend, die Kapazität (37Wh) bleibt dieselbe.</p>
+
+<h4>Ladezeiten (1S 10.000mAh, auf 4,2V, TP4056-Modul)</h4>
+<p class="small">Ladezeit ≈ Kapazität / Ladestrom × 1,2 (Zusatz für die CV-Phase). Modul-Default: <b>1A Ladestrom = 0,1C</b> – sehr schonend, volle Ladung in ~12h. Bei 1S entfällt der Zellausgleich komplett.</p>
+<table>
+<tr><th>Stromquelle</th><th>Max. Eingang</th><th>Ladestrom</th><th>Ladezeit</th><th>Bewertung</th></tr>
+<tr><td>USB 2.0 (PC-Port)</td><td>0,5A / 2,5W</td><td>~0,45A</td><td class="warn">~26 h</td><td>ohne Erkennung nur 500mA – ungeeignet</td></tr>
+<tr><td>USB 3.x (PC-Port)</td><td>0,9A / 4,5W</td><td>~0,85A</td><td>~14 h</td><td>geht, langsam</td></tr>
+<tr><td>USB-BC Ladesteckdose</td><td>1,5A / 7,5W</td><td>1,0A</td><td>~12 h</td><td>ok</td></tr>
+<tr><td><b>Netz-Ladegerät 5V/2,4A</b></td><td>12W</td><td>1,0A (Modul-Limit)</td><td class="good">~11 h</td><td>Empfehlung Klassenzimmer (über Nacht)</td></tr>
+<tr><td><b>USB-C PD (5V/3A)</b></td><td>15W</td><td>1,0A (Rprog-Limit)</td><td class="good">~11 h</td><td>schneller geht nicht ohne Umbau</td></tr>
+<tr><td>Rprog angepasst auf 2A</td><td>5V/2A nötig</td><td>2,0A</td><td class="good">~6 h</td><td>nur mit starker Quelle – Modul wird warm (≈2,6W Verlust, linearer Lader)</td></tr>
+<tr class="sum"><td colspan="5"><b>Fazit:</b> Mit dem Modul-Default (1A) dauert eine volle Ladung ~11-12h – ideal über Nacht. Der PC-USB-Port (0,5A) ist mit ~26h unpraktisch. Wärme beachten: TP4056 ist linear, (5V−Akku)×1A ≈ 1,3W Wärme am Modul – belüftet einbauen. Lithium-Sicherheit: nur mit angeschlossener Schaltung laden (DW01A trennt bei Tiefentladung/Überladung/Kurzschluss), Zelle nie unbeaufsichtigt über Nacht am unbekannten Ladegerät betreiben.</td></tr>
+</table>
+
+<h3 class="pbreak">4.3 Technische Daten (Zusammenfassung)</h3>
+<table>
+<tr><th>Parameter</th><th>Wert</th></tr>
+<tr><td>Prozessor</td><td>ESP32-WROOM-32E (2× 240MHz, WiFi 802.11 b/g/n, BT 4.2)</td></tr>
+<tr><td>Koprozessor</td><td>Arduino Pro Micro (ATmega32U4, 16MHz, 5V)</td></tr>
+<tr><td>Verfügbare GPIOs</td><td>34 (10 fest, 24 frei auf Female-Header)</td></tr>
+<tr><td>Busse</td><td>I²C (IO21/IO22, 400kHz) · SPI (IO18/19/23/26) · GPIO (IO16/17)</td></tr>
+<tr><td>Motor-Treiber</td><td>DRV8833 Dual H-Bridge (TI): 1,2A/Kanal dau · 2A Spitze, 360mΩ → ~6V am Motor, keine Kühlung nötig</td></tr>
+<tr><td>Motor</td><td>2× N20, 6V, 1000RPM, Hall-Encoder</td></tr>
+<tr><td>Akku</td><td><b>1S LiPo 3,7V 10.000mAh (1160100, Fertig-Pack mit PCM)</b>, 37Wh, 11×60×100mm</td></tr>
+<tr><td>Ladespannung</td><td>4,2V (CC/CV), USB-C 5V Eingang, TP4056-Modul mit DW01A-Schutz</td></tr>
+<tr><td>Betriebsspannung</td><td>3,0-4,2V (Akku) → Boost hält konstant 6V (Motor) / 5V (Logik) / 3,3V (Sensoren)</td></tr>
+<tr><td>Ladestrom</td><td>1A (0,1C, Modul-Default) · ~11h Ladezeit · optional 2A per Rprog</td></tr>
+<tr><td>Max. Stromverbrauch</td><td>≈ 6 A (Batterie, Spitze: Stall + LEDs volle Helligkeit)</td></tr>
+<tr><td>Typ. Stromverbrauch</td><td>≈ 1,4 A (Batterie, Dauerfahrt, LEDs gedimmt)</td></tr>
+<tr><td>Laufzeit (typisch)</td><td class="good">6-7 Stunden (Dauerfahrt, LEDs gedimmt) · 11h ohne LEDs · 2,7h LEDs volle</td></tr>
+<tr><td>Laufzeit (Standby)</td><td>~20-50 Stunden</td></tr>
+<tr><td><b>Bauform (L×B×H)</b></td><td><b>160 × 160 × 100 mm</b></td></tr>
+<tr><td><b>Gewicht</b></td><td><b>~800 g</b></td></tr>
+<tr><td>Sensorik vorn</td><td>HC-SR04 Ultraschall (3-400cm, ±3mm, 40kHz, Echo-Teiler 10k/20k)</td></tr>
+<tr><td>Sensorik seitlich</td><td>2× VL53L0X ToF (30mm-2m, 940nm)</td></tr>
+<tr><td>Sensorik Boden</td><td>TCS34725 Farbsensor (RGB + Clear)</td></tr>
+<tr><td>Sensorik Lage</td><td>LSM6DSOX 6-Achsen IMU (Accel ±16g, Gyro ±2000dps)</td></tr>
+<tr><td>Anzeige</td><td>0,96" OLED 128×64 + WS2812 LED-Strip 60cm</td></tr>
+<tr><td>Datenspeicher</td><td>microSD (SPI, bis 32GB)</td></tr>
+<tr><td>Kommunikation</td><td>WiFi (STA/AP), Bluetooth, I²C, SPI, UART</td></tr>
+<tr><td>Programmierung</td><td>USB-C (ESP32) + Micro-USB (Arduino), Arduino IDE / PlatformIO</td></tr>
+<tr><td>Bauzeit (geschätzt)</td><td>4-8 Stunden pro Roboter (Schüler, mit Anleitung)</td></tr>
+<tr class="sum"><td><b>Stückpreis (20er-Serie)</b></td><td><b>~150-175 €</b> (teure Chassis-Variante bis ~200€) · Gesamtbestellung ~3.000-3.500€</td></tr>
+</table>
+
+<p class="small" style="margin-top:5mm;text-align:center;color:#888">Kettenroboter Konzept V1.0 · Stand 28.09.2026 · Alle Preise Richtwerte inkl. MwSt. · Bestellung: Dezember 2026</p>
+
+</body>
+</html>

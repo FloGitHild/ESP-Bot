@@ -1,0 +1,6 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "KiCad") (type "Table") (uri "${KICAD10_TEMPLATE_DIR}/sym-lib-table") (options "") (descr "KiCad Standard-Bibliotheken"))
+	(lib (name "MotorBoards") (type "KiCad") (uri "${KICAD10_3RD_PARTY}/symbols/com_github_me_motorboards/MotorBoards.kicad_sym") (options "") (descr "Motor Boards DRV8833/TCA9548A/IP5306 Symbol-Bibliothek"))
+	(lib (name "Espressif") (type "KiCad") (uri "${KICAD10_3RD_PARTY}/symbols/com_github_espressif_kicad-libraries/Espressif.kicad_sym") (options "") (descr "Espressif ESP32 Symbol-Bibliothek"))
+)
